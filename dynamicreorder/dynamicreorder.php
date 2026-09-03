@@ -61,7 +61,7 @@ class DynamicReorder extends Module
     {
         $this->name = 'dynamicreorder';
         $this->tab = 'front_office_features';
-        $this->version = '1.1.0';
+        $this->version = '1.1.1';
         $this->author = 'Anirudha Talmale';
         $this->need_instance = 0;
         $this->bootstrap = true;
