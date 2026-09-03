@@ -183,8 +183,9 @@ class DynamicReorderReorderModuleFrontController extends ModuleFrontController
 
     /**
      * Native behaviour: duplicate the order's cart and switch the session to it.
-     * This is the exact code path OrderController uses for "submitReorder",
-     * minus the redirect to checkout.
+     * This is the exact code path ParentOrderController::init() uses for
+     * "submitReorder" (inherited by OrderController and OrderOpcController),
+     * minus the redirect that leaves the customer on the checkout page.
      *
      * @return array|false
      */

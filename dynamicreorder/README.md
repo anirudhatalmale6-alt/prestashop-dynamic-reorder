@@ -25,8 +25,9 @@ All customer-facing text ships in **Spanish** by default and is editable in the 
 | Logged in, never ordered | Pop-up: no previous order found. |
 
 It reuses PrestaShop's native code path — `Cart::duplicate()` + `CartRule::autoAddToCart()`,
-exactly what `OrderController` runs for `?submitReorder&id_order=…` — minus the
-`Tools::redirect('index.php?controller=order')` that sends the customer to checkout.
+exactly what `ParentOrderController::init()` runs for `?submitReorder&id_order=…` (the
+parent of both `OrderController` and `OrderOpcController`) — minus the redirect that
+leaves the customer on the checkout page.
 
 ---
 
