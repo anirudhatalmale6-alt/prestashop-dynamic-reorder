@@ -172,9 +172,14 @@ class DynamicReorderReorderModuleFrontController extends ModuleFrontController
         // date_add alone is not enough: two orders can share a second.
         $sql .= ' ORDER BY o.`date_add` DESC, o.`id_order` DESC LIMIT 1';
 
-        $row = Db::getInstance()->getRow($sql);
+        // Use executeS()+first row rather than getRow(): on some 1.6 installs
+        // (verified on this client's shop, PS 1.6.1.6 / PHP 5.6) getRow() returns
+        // an empty result for this exact query while executeS() returns the row,
+        // which made every logged-in customer wrongly see "no previous order".
+        // Cache is disabled explicitly so a stale/empty cached row can't recur.
+        $rows = Db::getInstance()->executeS($sql, true, false);
 
-        return $row ? $row : false;
+        return (is_array($rows) && isset($rows[0])) ? $rows[0] : false;
     }
 
     /* ------------------------------------------------------------------ */

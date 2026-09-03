@@ -21,6 +21,12 @@ class Db {
         $GLOBALS['SQL'][] = preg_replace('/\s+/', ' ', trim($sql));
         return array_shift($GLOBALS['ROWS']);
     }
+    // Mirrors PrestaShop's executeS($sql, $array=true, $use_cache=true).
+    public function executeS($sql, $array = true, $use_cache = true) {
+        $GLOBALS['SQL'][] = preg_replace('/\s+/', ' ', trim($sql));
+        $row = array_shift($GLOBALS['ROWS']);
+        return $row ? array($row) : array();
+    }
 }
 class Shop {
     const SHARE_ORDER = 'share_order';
