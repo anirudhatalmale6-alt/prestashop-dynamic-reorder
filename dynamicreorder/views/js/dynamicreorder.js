@@ -47,7 +47,7 @@
     box.appendChild(title);
     box.appendChild(body);
 
-    if (payload.cart && payload.cart.nb) {
+    if (payload.cart && payload.cart.nb && cfg.labels.cartNow) {
       var summary = document.createElement('p');
       summary.className = 'dr-modal__summary';
       summary.textContent = cfg.labels.cartNow
@@ -151,16 +151,26 @@
   /* ---------------------------------------------------------------- */
 
   function refreshCartBlock(payload) {
-    if (typeof window.prestashop === 'undefined' || !window.prestashop.emit) {
-      return;
+    // PrestaShop 1.7 / 8: the theme listens on the prestashop event bus.
+    if (typeof window.prestashop !== 'undefined' && window.prestashop.emit) {
+      try {
+        window.prestashop.emit('updateCart', {
+          reason: { linkAction: 'refresh', cart: payload.cart || null },
+          resp: { hasError: false, errors: [] }
+        });
+        return;
+      } catch (e) {
+        /* fall through to the 1.6 path */
+      }
     }
-    try {
-      window.prestashop.emit('updateCart', {
-        reason: { linkAction: 'refresh', cart: payload.cart || null },
-        resp: { hasError: false, errors: [] }
-      });
-    } catch (e) {
-      /* a theme that does not listen is fine - the reload path covers it */
+
+    // PrestaShop 1.6: blockcart exposes a global ajaxCart object instead.
+    if (typeof window.ajaxCart !== 'undefined' && typeof window.ajaxCart.refresh === 'function') {
+      try {
+        window.ajaxCart.refresh();
+      } catch (e) {
+        /* a theme that does not expose it is fine - the reload path covers it */
+      }
     }
   }
 

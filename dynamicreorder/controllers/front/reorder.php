@@ -28,11 +28,20 @@ class DynamicReorderReorderModuleFrontController extends ModuleFrontController
     {
         $this->isAjaxRequest = $this->detectAjax();
 
+        if (!Configuration::get(DynamicReorder::CFG_ENABLED)) {
+            // Switched off in the back office: behave as if the module were not
+            // there rather than half-answering.
+            if ($this->isAjaxRequest) {
+                $this->respond(array('status' => 'disabled', 'message' => ''), 404);
+            }
+            Tools::redirect($this->context->link->getPageLink('index', null));
+        }
+
         // CSRF protection for the AJAX path: a cross-site form post cannot set a
         // custom header, so requiring X-Requested-With on POST is enough here.
         // The GET path is the no-JS fallback and mirrors native PrestaShop's own
         // tokenless "?submitReorder&id_order=" link.
-        if ($this->isAjaxRequest && Tools::strtoupper($_SERVER['REQUEST_METHOD']) !== 'POST') {
+        if ($this->isAjaxRequest && Tools::strtoupper(isset($_SERVER['REQUEST_METHOD']) ? $_SERVER['REQUEST_METHOD'] : '') !== 'POST') {
             $this->respond(array(
                 'status' => 'error',
                 'title' => $this->msg(DynamicReorder::CFG_TITLE_ERROR),
@@ -388,10 +397,10 @@ class DynamicReorderReorderModuleFrontController extends ModuleFrontController
      */
     private function urls()
     {
-        $home = $this->context->link->getPageLink('index', true);
+        $home = $this->context->link->getPageLink('index', null);
         $resume = $this->addFlag($home, DynamicReorder::RESUME_FLAG, 1);
 
-        $login = $this->context->link->getPageLink('authentication', true, null, array('back' => $resume));
+        $login = $this->context->link->getPageLink('authentication', null, null, array('back' => $resume));
         $register = $this->buildRegistrationUrl($resume);
 
         return array(
@@ -399,21 +408,17 @@ class DynamicReorderReorderModuleFrontController extends ModuleFrontController
             'resume' => $resume,
             'login' => $login,
             'register' => $register,
-            'cart' => $this->context->link->getPageLink('cart', true, null, array('action' => 'show')),
+            'cart' => $this->context->link->getPageLink('cart', null, null, array('action' => 'show')),
         );
     }
 
     private function buildRegistrationUrl($back)
     {
-        // 'registration' is its own page from 1.7.6 onwards; older 1.7 uses the
-        // create_account flag on the authentication page.
-        try {
-            $url = $this->context->link->getPageLink('registration', true, null, array('back' => $back));
-            if ($url && strpos($url, 'registration') !== false) {
-                return $url;
-            }
-        } catch (Exception $e) {
-            // fall through
+        // 'registration' only became its own page in 1.7.6. On 1.6 and early 1.7
+        // that controller does not exist, and getPageLink() would happily build a
+        // dead URL, so gate on the version rather than on the string it returns.
+        if (version_compare(_PS_VERSION_, '1.7.6.0', '>=')) {
+            return $this->context->link->getPageLink('registration', null, null, array('back' => $back));
         }
 
         return $this->context->link->getPageLink(
@@ -448,7 +453,7 @@ class DynamicReorderReorderModuleFrontController extends ModuleFrontController
         $this->context->cookie->dr_flash = json_encode($payload);
         $this->context->cookie->write();
 
-        $home = $this->context->link->getPageLink('index', true);
+        $home = $this->context->link->getPageLink('index', null);
         $url = $home . (strpos($home, '?') === false ? '?' : '&')
             . DynamicReorder::DONE_FLAG . '=' . urlencode($payload['status']);
 
@@ -462,7 +467,12 @@ class DynamicReorderReorderModuleFrontController extends ModuleFrontController
         }
 
         if (!headers_sent()) {
-            http_response_code($httpCode);
+            // http_response_code() is PHP 5.4+; PS 1.6 can still run on 5.3.
+            if (function_exists('http_response_code')) {
+                http_response_code($httpCode);
+            } else {
+                header('HTTP/1.1 ' . (int) $httpCode);
+            }
             header('Content-Type: application/json; charset=utf-8');
             header('Cache-Control: no-store, no-cache, must-revalidate');
         }
